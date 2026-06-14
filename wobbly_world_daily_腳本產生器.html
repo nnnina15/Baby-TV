@@ -1,0 +1,175 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.header { padding: 1.5rem 0 1rem; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 1.5rem; }
+.header h1 { font-size: 20px; font-weight: 500; color: var(--color-text-primary); }
+.header p { font-size: 13px; color: var(--color-text-secondary); margin-top: 4px; }
+.ep-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.ep-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 1rem; }
+.ep-badge { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 8px 12px; }
+.ep-badge .label { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 2px; }
+.ep-badge .value { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+.char-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.generate-btn { width: 100%; padding: 12px; font-size: 15px; font-weight: 500; cursor: pointer; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); transition: background 0.15s; }
+.generate-btn:hover { background: var(--color-background-secondary); }
+.generate-btn:active { transform: scale(0.98); }
+.script-output { margin-top: 1rem; }
+.script-section { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; margin-bottom: 0.75rem; }
+.script-section .sec-title { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+.script-section .sec-body { font-size: 14px; color: var(--color-text-primary); line-height: 1.7; white-space: pre-wrap; }
+.copy-btn { margin-top: 0.75rem; font-size: 13px; padding: 8px 16px; cursor: pointer; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); }
+.copy-btn:hover { background: var(--color-background-secondary); }
+.loading { text-align: center; padding: 2rem; color: var(--color-text-secondary); font-size: 14px; }
+.nav-row { display: flex; gap: 8px; align-items: center; margin-bottom: 1rem; }
+.nav-btn { padding: 6px 14px; font-size: 13px; cursor: pointer; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); }
+.nav-btn:hover { background: var(--color-background-secondary); }
+.ep-select { flex: 1; font-size: 14px; padding: 6px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); }
+</style>
+
+<h2 class="sr-only">Wobbly World 每日腳本生成器 — 根據今日日期自動選集並生成腳本</h2>
+
+<div class="header">
+  <h1>🌟 Wobbly World 每日腳本生成器</h1>
+  <p id="today-label">今天是...</p>
+</div>
+
+<div class="ep-card" id="ep-card">
+  <div class="ep-info" id="ep-info"></div>
+  <div class="nav-row">
+    <button class="nav-btn" onclick="changeEp(-1)">← 上集</button>
+    <select class="ep-select" id="ep-select" onchange="selectEp(this.value)"></select>
+    <button class="nav-btn" onclick="changeEp(1)">下集 →</button>
+  </div>
+  <button class="generate-btn" onclick="generateScript()">✨ 生成今日腳本 ↗</button>
+</div>
+
+<div id="script-output"></div>
+
+<script>
+const LAUNCH = new Date('2026-06-06');
+const EPISODES = [
+  { ep: 1, title: 'Mochi Finds a Star', type: 'Story', star: 'Mochi', concept: 'Shapes (star)', color: '#f9a8d4' },
+  { ep: 2, title: 'What Color is Sunny?', type: 'Learning', star: 'Sunny', concept: 'Colors: yellow, orange, red', color: '#fde047' },
+  { ep: 3, title: 'Bloop is Scared of the Dark', type: 'Story', star: 'Bloop', concept: 'Emotions: fear → bravery', color: '#67e8f9' },
+  { ep: 4, title: 'The ABC Song with Wobbly Friends', type: 'Song', star: 'All', concept: 'Alphabet A–Z', color: '#c4b5fd' },
+  { ep: 5, title: "Ziggy Builds Something Wobbly", type: 'Learning', star: 'Ziggy', concept: 'Shapes: circle, square, triangle', color: '#86efac' },
+  { ep: 6, title: "Pudding's Big Sleepy Adventure", type: 'Story', star: 'Pudding', concept: 'Animals (dream world)', color: '#d8b4fe' },
+  { ep: 7, title: 'Goodnight Wobbly World', type: 'Bedtime', star: 'Pudding', concept: 'Bedtime routine', color: '#d8b4fe' },
+  { ep: 8, title: 'Mochi Paints the Rainbow', type: 'Story', star: 'Mochi', concept: 'Rainbow 7 colors', color: '#f9a8d4' },
+  { ep: 9, title: "Let's Count with Sunny! 1–10", type: 'Learning', star: 'Sunny', concept: 'Numbers 1–10', color: '#fde047' },
+  { ep: 10, title: 'Bloop Finds 5 Blue Things', type: 'Story', star: 'Bloop', concept: 'Color blue + number 5', color: '#67e8f9' },
+  { ep: 11, title: 'The Number Song 1–10', type: 'Song', star: 'All', concept: 'Numbers 1–10', color: '#c4b5fd' },
+  { ep: 12, title: "Ziggy's Color Mixing Lab", type: 'Learning', star: 'Ziggy', concept: 'Color mixing: red+blue=purple', color: '#86efac' },
+  { ep: 13, title: 'Pudding Dreams of Red Apples', type: 'Story', star: 'Pudding', concept: 'Color red + food', color: '#d8b4fe' },
+  { ep: 14, title: 'Counting Stars Goodnight', type: 'Bedtime', star: 'Pudding', concept: 'Numbers 1–5', color: '#d8b4fe' },
+  { ep: 15, title: 'Mochi Meets a Big Lion', type: 'Story', star: 'Mochi', concept: 'Animals + big/small', color: '#f9a8d4' },
+  { ep: 16, title: 'What Sound Does the Duck Make?', type: 'Learning', star: 'Sunny', concept: 'Animal sounds', color: '#fde047' },
+  { ep: 17, title: 'Bloop and the Frog Family', type: 'Story', star: 'Bloop', concept: 'Family concept + frogs', color: '#67e8f9' },
+  { ep: 18, title: "Old MacDonald's Wobbly Farm", type: 'Song', star: 'All', concept: 'Farm animals', color: '#c4b5fd' },
+  { ep: 19, title: 'Ziggy and the Butterfly Wings', type: 'Learning', star: 'Ziggy', concept: 'Insects + colors', color: '#86efac' },
+  { ep: 20, title: 'Pudding Visits the Zoo', type: 'Story', star: 'Pudding', concept: 'Zoo animals', color: '#d8b4fe' },
+  { ep: 21, title: 'The Sleepy Animals Lullaby', type: 'Bedtime', star: 'Pudding', concept: 'Animals + sleep emotions', color: '#d8b4fe' },
+  { ep: 22, title: 'Mochi Gets Dressed', type: 'Story', star: 'Mochi', concept: 'Clothing + colors', color: '#f9a8d4' },
+  { ep: 23, title: 'Sunny Loves Vegetables!', type: 'Learning', star: 'Sunny', concept: 'Vegetable names', color: '#fde047' },
+  { ep: 24, title: 'Bloop Learns to Share', type: 'Story', star: 'Bloop', concept: 'Sharing + social skills', color: '#67e8f9' },
+  { ep: 25, title: 'Brush Your Teeth Song', type: 'Song', star: 'All', concept: 'Daily routine', color: '#c4b5fd' },
+  { ep: 26, title: 'Ziggy Cooks Breakfast', type: 'Learning', star: 'Ziggy', concept: 'Food + quantities', color: '#86efac' },
+  { ep: 27, title: "Pudding's Rainy Day at Home", type: 'Story', star: 'Pudding', concept: 'Weather + indoor activities', color: '#d8b4fe' },
+  { ep: 28, title: 'Time to Sleep, Wobbly Friends', type: 'Bedtime', star: 'Pudding', concept: 'Full bedtime routine', color: '#d8b4fe' },
+  { ep: 29, title: "Mochi's Birthday Surprise", type: 'Story', star: 'All', concept: 'Numbers (age) + colors', color: '#f9a8d4' },
+  { ep: 30, title: 'Best of Wobbly World — Celebration', type: 'Special', star: 'All', concept: 'Review all concepts', color: '#c4b5fd' },
+];
+
+const TYPE_COLORS = { Story: '#f9a8d4', Learning: '#fde047', Song: '#c4b5fd', Bedtime: '#d8b4fe', Special: '#86efac' };
+
+let currentEpIndex = 0;
+
+function getTodayEpIndex() {
+  const today = new Date();
+  const diff = Math.floor((today - LAUNCH) / (1000 * 60 * 60 * 24));
+  return Math.max(0, Math.min(diff % 30, 29));
+}
+
+function init() {
+  const today = new Date();
+  const days = ['日','一','二','三','四','五','六'];
+  document.getElementById('today-label').textContent =
+    `今天 ${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()} (週${days[today.getDay()]})`;
+
+  const select = document.getElementById('ep-select');
+  EPISODES.forEach((ep, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `EP${String(ep.ep).padStart(2,'0')} — ${ep.title}`;
+    select.appendChild(opt);
+  });
+
+  currentEpIndex = getTodayEpIndex();
+  select.value = currentEpIndex;
+  renderEpCard();
+}
+
+function renderEpCard() {
+  const ep = EPISODES[currentEpIndex];
+  document.getElementById('ep-select').value = currentEpIndex;
+  document.getElementById('ep-info').innerHTML = `
+    <div class="ep-badge">
+      <div class="label">集數</div>
+      <div class="value">EP${String(ep.ep).padStart(2,'0')}</div>
+    </div>
+    <div class="ep-badge">
+      <div class="label">類型</div>
+      <div class="value">${ep.type}</div>
+    </div>
+    <div class="ep-badge">
+      <div class="label">主角</div>
+      <div class="value"><span class="char-dot" style="background:${ep.color}"></span>${ep.star}</div>
+    </div>
+    <div class="ep-badge">
+      <div class="label">學習概念</div>
+      <div class="value" style="font-size:12px">${ep.concept}</div>
+    </div>
+  `;
+  document.getElementById('script-output').innerHTML = '';
+}
+
+function changeEp(dir) {
+  currentEpIndex = (currentEpIndex + dir + 30) % 30;
+  renderEpCard();
+}
+
+function selectEp(val) {
+  currentEpIndex = parseInt(val);
+  renderEpCard();
+}
+
+function generateScript() {
+  const ep = EPISODES[currentEpIndex];
+  sendPrompt(`請為 Wobbly World 生成完整腳本：
+
+集數：EP${String(ep.ep).padStart(2,'0')}
+標題：${ep.title}
+類型：${ep.type}
+主角：${ep.star}
+學習概念：${ep.concept}
+
+請依照以下結構生成完整英文腳本（附中文備註說明）：
+【Opening】0:00–0:45 角色介紹＋問題設定
+【Adventure】0:45–5:30 三個小挑戰＋角色互動
+【Learning】5:30–9:00 教育概念融入故事
+【Song】9:00–10:30 朗朗上口的歌詞
+【Ending】10:30–11:30 解決＋今日學習總結
+
+角色個性請對照 Character Bible：
+- Mochi（圓熊）：好奇衝動，口頭禪 "Let's try!"
+- Bloop（水滴蛙）：膽小但忠誠，口頭禪 "I'm not sure... but I'll come!"
+- Sunny（小雞）：過度正向停不下來，口頭禪 "I know! I know!"
+- Pudding（小象）：安靜愛睡偶爾說出深刻的話，口頭禪 "...Maybe... slowly?"
+- Ziggy（彩虹蟲）：創意混亂，口頭禪 "What if we do THIS?!"
+
+每句台詞不超過 10 個英文單字。每 2 分鐘有一次觀眾互動（"Can you say...?" 或 "Point to the..."）。`);
+}
+
+init();
+</script>
